@@ -1,9 +1,14 @@
+# Libraries
 import sqlite3
 import getpass
 import os
 import secrets
 import string
-import random
+from base64 import b64decode
+import hashlib
+
+# Files
+from encryption import derive_encryption_key, encrypt_password, decrypt_password, hash_password
 
 # Only skip login after first-time setup
 skip_login = False
@@ -18,7 +23,7 @@ if not os.path.exists(db):
     cursor = connection.cursor()
 
     # Create all necessary tables
-    cursor.execute("CREATE TABLE setup(master TEXT)")
+    cursor.execute("CREATE TABLE setup(master BLOB, key BLOB)")
     cursor.execute("CREATE TABLE entries(id INTEGER PRIMARY KEY AUTOINCREMENT, service TEXT, username TEXT, password TEXT)")
     connection.commit()
 
@@ -31,7 +36,14 @@ if not os.path.exists(db):
         
         # If passwords match, set master password
         if password1 == password2:
-            cursor.execute("INSERT INTO setup (master) VALUES (?)", (password1,))
+            master_hash = hash_password(password1)
+            
+            # Generate unique salt
+            salt = os.urandom(32)
+            # Generate key
+            key = derive_encryption_key(password1, salt)
+            
+            cursor.execute("INSERT INTO setup (master, key) VALUES (?, ?)", (master_hash, key,))
             connection.commit()
             setup_loop = False
             skip_login = True
@@ -45,7 +57,7 @@ if not os.path.exists(db):
     connection.close()
 
 # Login loop
-login = False
+login = False#
 while not login and not skip_login:
     master = getpass.getpass("\nEnter master password: ")
     connection = sqlite3.connect(db)
@@ -54,7 +66,7 @@ while not login and not skip_login:
     fetched_master = cursor.fetchone()
     
     # If entered password matches db, access granted
-    if fetched_master and master == fetched_master[0]:
+    if fetched_master and hash_password(master) == fetched_master[0]:
         print(("Access Granted"))
         login = True
     # Else, try again
