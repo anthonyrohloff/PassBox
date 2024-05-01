@@ -24,7 +24,7 @@ if not os.path.exists(db):
 
     # Create all necessary tables
     cursor.execute("CREATE TABLE setup(master BLOB, key BLOB)")
-    cursor.execute("CREATE TABLE entries(id INTEGER PRIMARY KEY AUTOINCREMENT, service TEXT, username TEXT, password TEXT)")
+    cursor.execute("CREATE TABLE entries(id INTEGER PRIMARY KEY AUTOINCREMENT, service TEXT, username TEXT, password BLOB)")
     connection.commit()
 
     # Set master password
@@ -107,14 +107,17 @@ while run:
         else:
             password = input("\nInput password:\n")
         
+        encrypted_password = encrypt_password(password)
+        
         connection = sqlite3.connect(db)
         cursor = connection.cursor()
-        cursor.execute("INSERT INTO entries (service, username, password) VALUES (?, ?, ?)", (service, username, password))
+        cursor.execute("INSERT INTO entries (service, username, password) VALUES (?, ?, ?)", (service, username, encrypted_password))
 
         
         connection.commit()
         cursor.close()
         connection.close()
+        
     # Browse entries
     elif action==2:
         print("Select entry to view by entering id:\nPress enter to return to menu\n")
@@ -136,7 +139,10 @@ while run:
         if selected_entry:
             print(f"Entry for {selected_entry[1]}:")
             print("Username:", selected_entry[2])
-            print("Password:", selected_entry[3])
+            
+            selected_password = selected_entry[3]
+
+            print("Password:", decrypt_password(selected_password))
         else:
             print("Entry with service '{}' not found.".format(selection))
         

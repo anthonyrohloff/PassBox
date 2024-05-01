@@ -1,11 +1,10 @@
-# https://www.linkedin.com/pulse/how-create-password-manager-python-yamil-garcia-rjxse/
-
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 from cryptography.hazmat.backends import default_backend
 from cryptography.fernet import Fernet
 import base64
 import hashlib
+import sqlite3
 
 def derive_encryption_key(master, salt):
     kdf = PBKDF2HMAC(
@@ -17,14 +16,35 @@ def derive_encryption_key(master, salt):
     )
     
     key = base64.urlsafe_b64encode(kdf.derive(master.encode()))
+
     return key
 
-def encrypt_password(password, key):
+def encrypt_password(password):
+    
+    connection = sqlite3.connect("credentials.db")
+    cursor = connection.cursor()
+    
+    key = cursor.execute("SELECT key FROM setup").fetchone()[0]
+    
+    connection.commit()
+    cursor.close()
+    connection.close()
+
     fernet = Fernet(key)
     encrypt_password = fernet.encrypt(password.encode())
     return encrypt_password
 
-def decrypt_password(encrypted_password, key):
+def decrypt_password(encrypted_password):
+
+    connection = sqlite3.connect("credentials.db")
+    cursor = connection.cursor()
+    
+    key = cursor.execute("SELECT key FROM setup").fetchone()[0]
+    
+    connection.commit()
+    cursor.close()
+    connection.close()
+
     fernet = Fernet(key)
     decrypted_password = fernet.decrypt(encrypted_password).decode()
     return decrypted_password
