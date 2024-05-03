@@ -4,8 +4,6 @@ import getpass
 import os
 import secrets
 import string
-from base64 import b64decode
-import hashlib
 
 # Files
 from encryption import derive_encryption_key, encrypt_password, decrypt_password, hash_password
@@ -82,13 +80,20 @@ run = True
 skip_menu = False
 while run:
     if not skip_menu:
-        print("\n\n\nMenu:\nSelect Action")
-        action = int(input("[1] Create new entry\n[2] Browse entries\n[3] Remove an entry\n[4] Quit\n"))
+        try:
+            print("\n\n\nMenu:\nSelect Action")
+            action = input("[1] Create new entry\n[2] Browse entries\n[3] Remove an entry\n[4] Quit\n")
+            
+            if action not in ["1", "2", "3", "4"]:
+                raise ValueError("\nPlease enter a valid menu option")
+        except ValueError as e:
+            print(e)
+            continue
     else:
         skip_menu = False
         
     # Create a new entry
-    if action==1:
+    if action=="1":
         print("Create new entry:\nPress enter to return to menu\n")
         service = input("Input entry name:\n")
         
@@ -97,97 +102,184 @@ while run:
         
         username = input("\nInput username:\n")
         
-        generate = input("\nGenerate complex password? [y/n]: ")
-        if generate == "y":
-            accept = "n"
-            while accept == "n":
-                length = int(input("\nEnter desired length of password: "))
-                password = ''.join(secrets.choice(string.ascii_letters + string.digits + string.punctuation) for x in range(length))  
-                accept = input("\nYour password is: "+ str(password) + "\nAccept password? [y/n]: ")
-        else:
-            password = input("\nInput password:\n")
-        
-        encrypted_password = encrypt_password(password)
-        
-        connection = sqlite3.connect(db)
-        cursor = connection.cursor()
-        cursor.execute("INSERT INTO entries (service, username, password) VALUES (?, ?, ?)", (service, username, encrypted_password))
+        creating = True
+        while creating:
+            generate = input("\nGenerate complex password? [y/n]: ")
+            try:
+                if generate not in ["y", "n"]:
+                    raise ValueError("Please enter a valid option")
+                if generate == "y":
+                    accept = "n"
+                    
+                    while accept == "n":
+                        length = int(input("\nEnter desired length of password: "))
 
-        
-        connection.commit()
-        cursor.close()
-        connection.close()
-        
-    # Browse entries
-    elif action==2:
-        print("Select entry to view by entering id:\nPress enter to return to menu\n")
-        
-        connection = sqlite3.connect(db)
-        cursor = connection.cursor()
-        
-        for row in cursor.execute("SELECT id, service FROM entries"):
-            print(f"[{row[0]}] {row[1]}")
-        selection = input("\n")
-        
-        if selection == "":
-            continue
-        
-        cursor.execute("SELECT * FROM entries WHERE id=?", (selection,))
-        
-        selected_entry = cursor.fetchone()
-        
-        if selected_entry:
-            print(f"Entry for {selected_entry[1]}:")
-            print("Username:", selected_entry[2])
-            
-            selected_password = selected_entry[3]
+                        validated = False
+                        while not validated:
+                            password = ''.join(secrets.choice(string.ascii_letters + string.digits + string.punctuation) for x in range(length))  
+                            try:
+                                accept = input("\nYour password is: "+ str(password) + "\nAccept password? [y/n]: ")
+                                
+                                if accept not in ["y", "n"]:
+                                    raise ValueError("Please enter a valid input")
+                                
+                                validated = True
+                                
+                            except ValueError as e:
+                                print(e)
+                                continue
+                            
+                else:
+                    password = input("\nInput password:\n")
+                
+                encrypted_password = encrypt_password(password)
+                
+                connection = sqlite3.connect(db)
+                cursor = connection.cursor()
+                cursor.execute("INSERT INTO entries (service, username, password) VALUES (?, ?, ?)", (service, username, encrypted_password))
 
-            print("Password:", decrypt_password(selected_password))
-        else:
-            print("Entry with service '{}' not found.".format(selection))
-        
-        cursor.close()
-        connection.close()
-        
-        input("\nPress enter to continue")
-    # Remove an entry
-    elif action ==3:
-        print("\nSelect entry to remove by entering id:\nPress enter to return to menu\n")
-        
-        connection = sqlite3.connect(db)
-        cursor = connection.cursor()
-        
-        print("[d] Delete all entries")
-        for row in cursor.execute("SELECT id, service FROM entries"):
-            print(f"[{row[0]}] {row[1]}")
-        selection = input("\n")     
-        
-        if selection == "":
-            continue
-        elif selection == "d":
-            confirm = input("Are you sure? This will DELETE ALL of your entries [y/n]: ")
-            if confirm == "y":
                 connection.commit()
                 cursor.close()
-                connection.close()    
+                connection.close()
                 
-                os.remove("credentials.db")
-                print("\nAll data cleared\n")
-                run = False
-                
+                creating = False
+            except ValueError as e:
+                print(e)
                 continue
+        
+    # Browse entries
+    elif action == "2":
+        connection = sqlite3.connect(db)
+        cursor = connection.cursor()
+        
+        cursor.execute("SELECT COUNT(*) FROM entries")
+        count = cursor.fetchone()[0]
+        
+        if count == 0:
+            print("\nNo entries to view")
+            continue
+        
+        print("Select entry to view by entering id:\nPress enter to return to menu\n")
+    
+        selecting = True
+        while selecting:
+            id_list = []
+            for row in cursor.execute("SELECT id, service FROM entries"):
+                print(f"[{row[0]}] {row[1]}")
+                id_list.append(row[0])
+            
+            try:
+                selection = int(input("\n"))
+
+                if selection not in id_list and selection:
+                    print("Please enter a valid number")
+                    continue
+                selecting = False
+                
+            except:
+                if selecting:
+                    break
+                print("Please enter a number")
+                continue
+        
+        if selecting:
+            continue
+        
+        if selection:
+            cursor.execute("SELECT * FROM entries WHERE id=?", (selection,))
+            
+            selected_entry = cursor.fetchone()
+            
+            if selected_entry:
+                print(f"Entry for {selected_entry[1]}:")
+                print("Username:", selected_entry[2])
+                
+                selected_password = selected_entry[3]
+
+                print("Password:", decrypt_password(selected_password))
             else:
-                action = 3
-                skip_menu = True
-                continue
+                print("Entry with service '{}' not found.".format(selection))
+            
+            cursor.close()
+            connection.close()
+            
+            input("\nPress enter to continue")
+        
+    # Remove an entry
+    elif action == "3":
+        connection = sqlite3.connect(db)
+        cursor = connection.cursor()
+        
+        cursor.execute("SELECT COUNT(*) FROM entries")
+        count = cursor.fetchone()[0]
+        
+        if count == 0:
+            print("\nNo entries to remove")
+            continue
+        
+        print("\nSelect entry to remove by entering id:\nPress enter to return to menu\n")
+        
+        selecting = True
+        while selecting:
+            id_list = []
+
+            for row in cursor.execute("SELECT id, service FROM entries"):
+                print(f"[{row[0]}] {row[1]}")
+                id_list.append(str(row[0]))
+            print("[d] Delete all entries")        
+               
+            try:
+                selection = input("\n")     
+            
+                if selection not in id_list and selection not in ["d", ""]:
+                    print("Please enter a valid input")
+                    continue
                 
-        cursor.execute("DELETE FROM entries WHERE id = ?", (selection,))
+                elif selection == "d":
+                    selecting = False
+                    
+                    # TODO finish validating this input
+                    confirming = True
+                    while confirming: 
+                        try:
+                            confirm = input("Are you sure? This will DELETE ALL of your entries [y/n]: ")
+                            if confirm == "y":
+                                connection.commit()
+                                cursor.close()
+                                connection.close()    
+                                
+                                os.remove("credentials.db")
+                                print("\nAll data cleared\n")
+                                run = False
+                                confiming = False
+                                continue
+                            else:
+                                selecting = False
+                                action = "3"
+                                skip_menu = True
+                                confiming = False
+                                continue
+                        except:
+                            print("\nPlease enter a valid input")
+                            continue
+                selecting = False
+
+            except:
+                print("Please enter a valid input")
+                continue
+        
+        if selection == '':
+            continue
+        
+        cursor.execute("DELETE FROM entries WHERE id = ?", (int(selection),))
         connection.commit()
         
         cursor.close()
         connection.close()      
         
+
         input("Entry removed\nPress enter to continue")
+        
     # Quit
     else:
         run=False
