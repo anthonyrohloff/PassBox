@@ -5,6 +5,8 @@ import os
 import secrets
 import string
 
+# Comment on laptop
+
 # Files
 from encryption import derive_encryption_key, encrypt_password, decrypt_password, hash_password
 
