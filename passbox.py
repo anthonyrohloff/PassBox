@@ -7,6 +7,7 @@ import string
 
 # Files
 from encryption import derive_encryption_key, encrypt_password, decrypt_password, hash_password
+from logging import log_action
 
 # Only skip login after first-time setup
 skip_login = False
@@ -23,6 +24,7 @@ if not os.path.exists(db):
     # Create all necessary tables
     cursor.execute("CREATE TABLE setup(master BLOB, key BLOB)")
     cursor.execute("CREATE TABLE entries(id INTEGER PRIMARY KEY AUTOINCREMENT, service TEXT, username TEXT, password BLOB)")
+    cursor.execute("CREATE TABLE log(id INT, action TEXT, time TEXT)")
     connection.commit()
 
     # Set master password
@@ -138,10 +140,15 @@ while run:
                 cursor = connection.cursor()
                 cursor.execute("INSERT INTO entries (service, username, password) VALUES (?, ?, ?)", (service, username, encrypted_password))
 
+                cursor.execute("SELECT MAX(id) FROM entries")
+                entry_id = cursor.fetchone()[0]
+
                 connection.commit()
                 cursor.close()
                 connection.close()
                 
+                log_action("Created", entry_id)
+
                 creating = False
             except ValueError as e:
                 print(e)
