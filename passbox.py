@@ -5,8 +5,6 @@ import os
 import secrets
 import string
 
-# Comment on laptop
-
 # Files
 from encryption import derive_encryption_key, encrypt_password, decrypt_password, hash_password
 
@@ -219,69 +217,57 @@ while run:
             print("\nNo entries to remove")
             continue
         
-        print("\nSelect entry to remove by entering id:\nPress enter to return to menu\n")
-        
         selecting = True
         while selecting:
             id_list = []
+
+            print("\nSelect entry to remove by entering id:\nPress enter to return to menu\n")
 
             for row in cursor.execute("SELECT id, service FROM entries"):
                 print(f"[{row[0]}] {row[1]}")
                 id_list.append(str(row[0]))
             print("[d] Delete all entries")        
-               
-            try:
-                selection = input("\n")     
             
-                if selection not in id_list and selection not in ["d", ""]:
-                    print("Please enter a valid input")
-                    continue
-                
-                elif selection == "d":
-                    selecting = False
-                    
-                    # TODO finish validating this input
-                    confirming = True
-                    while confirming: 
-                        try:
-                            confirm = input("Are you sure? This will DELETE ALL of your entries [y/n]: ")
-                            if confirm == "y":
-                                connection.commit()
-                                cursor.close()
-                                connection.close()    
-                                
-                                os.remove("credentials.db")
-                                print("\nAll data cleared\n")
-                                run = False
-                                confiming = False
-                                continue
-                            else:
-                                selecting = False
-                                action = "3"
-                                skip_menu = True
-                                confiming = False
-                                continue
-                        except:
-                            print("\nPlease enter a valid input")
-                            continue
-                selecting = False
-
-            except:
+            selection = input("\n")     
+            
+            if selection not in id_list and selection != "d" and selection != "":
                 print("Please enter a valid input")
                 continue
-        
-        if selection == '':
-            continue
-        
-        cursor.execute("DELETE FROM entries WHERE id = ?", (int(selection),))
-        connection.commit()
-        
-        cursor.close()
-        connection.close()      
-        
+            
+            if selection in id_list:
+                cursor.execute("DELETE FROM entries WHERE id = ?", (int(selection),))
+                connection.commit()
+                
+                cursor.close()
+                connection.close()      
+            
+                input("Entry removed\nPress enter to continue")
+                break
+            elif selection == "d":
+                deleting = False
 
-        input("Entry removed\nPress enter to continue")
-        
+                while not deleting:
+                    confirmation = input("Are you sure? This will DELETE ALL entries. [y/n]\n")
+                    if confirmation in ["y", "n"]:
+                        if confirmation == "y":
+                            deleting = True
+                            selecting = False
+                            pass
+                        elif confirmation == "n":
+                            break
+                    else:
+                        print("\nPlease enter a valid input\n")
+                        continue
+
+                    cursor.close()
+                    connection.close()
+                    os.remove("credentials.db")
+                    run = False
+                    break
+            elif selection == '':
+                selecting = False
+
+
     # Quit
     else:
         run=False
