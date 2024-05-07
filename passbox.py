@@ -172,14 +172,12 @@ while run:
                 selection = int(input("\n"))
 
                 if selection not in id_list and selection:
-                    print("Please enter a valid number")
+                    print("\nPlease enter a valid number\n")
                     continue
                 selecting = False
                 
             except:
-                if selecting:
-                    break
-                print("Please enter a number")
+                print("\nPlease enter a number\n")
                 continue
         
         if selecting:
