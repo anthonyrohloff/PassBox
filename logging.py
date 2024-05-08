@@ -9,6 +9,7 @@ def log_action(action, id):
     connection = sqlite3.connect("credentials.db")
     cursor = connection.cursor()
 
+    # Add entry to table
     cursor.execute("INSERT INTO log (id, action, time) VALUES (?, ?, ?)", (id, action, timestamp,))
 
     connection.commit()

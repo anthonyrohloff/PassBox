@@ -7,6 +7,7 @@ import hashlib
 import sqlite3
 
 def derive_encryption_key(master, salt):
+    # Set up key params
     kdf = PBKDF2HMAC(
         algorithm=hashes.SHA256(),
         length=32,
@@ -20,31 +21,33 @@ def derive_encryption_key(master, salt):
     return key
 
 def encrypt_password(password):
-    
     connection = sqlite3.connect("credentials.db")
     cursor = connection.cursor()
     
+    # Get master key
     key = cursor.execute("SELECT key FROM setup").fetchone()[0]
     
     connection.commit()
     cursor.close()
     connection.close()
 
+    # Encrypt password
     fernet = Fernet(key)
     encrypt_password = fernet.encrypt(password.encode())
     return encrypt_password
 
 def decrypt_password(encrypted_password):
-
     connection = sqlite3.connect("credentials.db")
     cursor = connection.cursor()
     
+    # Get master key
     key = cursor.execute("SELECT key FROM setup").fetchone()[0]
     
     connection.commit()
     cursor.close()
     connection.close()
 
+    # Decrypt password
     fernet = Fernet(key)
     decrypted_password = fernet.decrypt(encrypted_password).decode()
     return decrypted_password
