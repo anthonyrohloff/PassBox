@@ -84,9 +84,9 @@ while run:
     if not skip_menu:
         try:
             print("\n\n\nMenu:\nSelect Action")
-            action = input("[1] Create new entry\n[2] Browse entries\n[3] Remove an entry\n[4] Quit\n")
+            action = input("[1] Create new entry\n[2] Browse entries\n[3] Remove an entry\n[4] View log\n[5] Quit\n")
             
-            if action not in ["1", "2", "3", "4"]:
+            if action not in ["1", "2", "3", "4", "5"]:
                 raise ValueError("\nPlease enter a valid menu option")
         except ValueError as e:
             print(e)
@@ -192,7 +192,7 @@ while run:
         
         if selection:
             cursor.execute("SELECT * FROM entries WHERE id=?", (selection,))
-            
+
             selected_entry = cursor.fetchone()
             
             if selected_entry:
@@ -207,7 +207,9 @@ while run:
             
             cursor.close()
             connection.close()
-            
+
+            log_action("Viewed", selection) 
+
             input("\nPress enter to continue")
         
     # Remove an entry
@@ -241,11 +243,13 @@ while run:
             
             if selection in id_list:
                 cursor.execute("DELETE FROM entries WHERE id = ?", (int(selection),))
+
                 connection.commit()
-                
                 cursor.close()
                 connection.close()      
             
+                log_action("Removed", selection)
+
                 input("Entry removed\nPress enter to continue")
                 break
             elif selection == "d":
@@ -272,7 +276,20 @@ while run:
             elif selection == '':
                 selecting = False
 
+    elif action == "4":
+        print("\n")
+        connection = sqlite3.connect(db)
+        cursor = connection.cursor()        
 
+        for row in cursor.execute("SELECT id, action, time FROM log"):
+            print(f"{row[1]} entry with id {row[0]} at {row[2]}")    
+
+        connection.commit()
+        cursor.close()
+        connection.close()   
+
+        input("\nPress enter to continue")
+        
     # Quit
     else:
         run=False
