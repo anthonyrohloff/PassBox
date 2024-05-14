@@ -7,7 +7,7 @@ import string
 
 # Files
 from encryption import derive_encryption_key, encrypt_password, decrypt_password, hash_password
-from logging import log_action
+from logging_action import log_action
 
 # Only skip login after first-time setup
 skip_login = False
@@ -26,6 +26,9 @@ if not os.path.exists(db):
     cursor.execute("CREATE TABLE entries(id INTEGER PRIMARY KEY AUTOINCREMENT, service TEXT, username TEXT, password BLOB)")
     cursor.execute("CREATE TABLE log(id INT, action TEXT, time TEXT)")
     connection.commit()
+
+    # Set file permissions to 600 (read and write for owner, no permissions for others)
+    os.chmod(db, 0o600)
 
     # Set master password
     setup_loop = True
